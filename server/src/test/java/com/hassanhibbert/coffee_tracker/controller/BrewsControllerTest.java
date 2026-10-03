@@ -35,6 +35,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -67,6 +68,24 @@ class BrewsControllerTest {
     void requestWithoutToken_is401() throws Exception {
         mvc.perform(get("/api/v1/brews")).andExpect(status().isUnauthorized());
         verifyNoInteractions(brewsService);
+    }
+
+    @Test
+    void corsPreflightFromAllowedOrigin_isAccepted() throws Exception {
+        mvc.perform(options("/api/v1/brews")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "authorization,content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+    }
+
+    @Test
+    void corsPreflightFromUnknownOrigin_isRejected() throws Exception {
+        mvc.perform(options("/api/v1/brews")
+                        .header("Origin", "https://evil.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

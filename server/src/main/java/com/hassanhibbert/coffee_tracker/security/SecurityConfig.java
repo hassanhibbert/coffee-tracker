@@ -1,6 +1,7 @@
 package com.hassanhibbert.coffee_tracker.security;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,10 +17,14 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -32,6 +37,9 @@ public class SecurityConfig {
                 // authenticates with an Authorization header the client must add explicitly,
                 // so there is no ambient credential to forge. (With session cookies, keep CSRF on.)
                 .csrf(csrf -> csrf.disable())
+                // Uses the CorsConfigurationSource bean below. Must be inside the security chain:
+                // a browser's preflight OPTIONS request carries no token and would otherwise get 401.
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
@@ -41,6 +49,27 @@ public class SecurityConfig {
                 // Validates "Authorization: Bearer <jwt>" on every request using the JwtDecoder below.
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
+    }
+
+    /**
+     * Browsers block JavaScript on origin A from reading responses from origin B unless B says
+     * A is allowed. Origins come from config (CORS_ALLOWED_ORIGINS, comma-separated); an empty
+     * list allows none, which is right when client and API share an origin (e.g. via a proxy).
+     */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.allowed-origins:}") List<String> allowedOrigins) {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setExposedHeaders(List.of("Location"));
+        // No cookies are involved (the token travels in a header), so credentials stay off.
+        config.setAllowCredentials(false);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
     }
 
     @Bean
