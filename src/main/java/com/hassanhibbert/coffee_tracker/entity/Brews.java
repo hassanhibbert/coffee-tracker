@@ -49,11 +49,16 @@ public class Brews {
     @Column(name = "brewed_at", nullable = false)
     private Instant brewedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private AppUser owner;
+
     protected Brews() {}
 
-    public Brews(Beans bean, Equipment equipment, GrindSize grindSize, BigDecimal coffeeGrams,
+    public Brews(AppUser owner, Beans bean, Equipment equipment, GrindSize grindSize, BigDecimal coffeeGrams,
                  BigDecimal waterGrams, Integer waterTempC, Integer brewTimeSeconds,
                  Integer rating, String notes, Instant brewedAt) {
+        this.owner = owner;
         this.bean = bean;
         this.equipment = equipment;
         this.grindSize = grindSize;
@@ -107,4 +112,6 @@ public class Brews {
     public Instant getBrewedAt() { return brewedAt; }
 
     public void setBrewedAt(Instant brewedAt) { this.brewedAt = brewedAt; }
+
+    public AppUser getOwner() { return owner; }
 }

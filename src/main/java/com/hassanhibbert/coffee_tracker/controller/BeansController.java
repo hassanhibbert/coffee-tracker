@@ -3,6 +3,7 @@ package com.hassanhibbert.coffee_tracker.controller;
 import com.hassanhibbert.coffee_tracker.dto.BeanRequest;
 import com.hassanhibbert.coffee_tracker.dto.BeanResponse;
 import com.hassanhibbert.coffee_tracker.service.BeansService;
+import com.hassanhibbert.coffee_tracker.security.CurrentUserId;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,18 +22,18 @@ public class BeansController {
     }
 
     @GetMapping
-    public List<BeanResponse> getAllBeans() {
-        return beansService.findAll();
+    public List<BeanResponse> getAllBeans(@CurrentUserId Long userId) {
+        return beansService.findAll(userId);
     }
 
     @GetMapping("/{id}")
-    public BeanResponse getBean(@PathVariable Long id) {
-        return beansService.findById(id);
+    public BeanResponse getBean(@PathVariable Long id, @CurrentUserId Long userId) {
+        return beansService.findById(id, userId);
     }
 
     @PostMapping
-    public ResponseEntity<BeanResponse> createBean(@Valid @RequestBody BeanRequest request) {
-        BeanResponse created = beansService.create(request);
+    public ResponseEntity<BeanResponse> createBean(@Valid @RequestBody BeanRequest request, @CurrentUserId Long userId) {
+        BeanResponse created = beansService.create(request, userId);
         // 201 Created + a Location header pointing at the new resource.
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.id()).toUri();
@@ -40,13 +41,13 @@ public class BeansController {
     }
 
     @PutMapping("/{id}")
-    public BeanResponse updateBean(@PathVariable Long id, @Valid @RequestBody BeanRequest request) {
-        return beansService.update(id, request);
+    public BeanResponse updateBean(@PathVariable Long id, @Valid @RequestBody BeanRequest request, @CurrentUserId Long userId) {
+        return beansService.update(id, request, userId);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBean(@PathVariable Long id) {
-        beansService.delete(id);
+    public ResponseEntity<Void> deleteBean(@PathVariable Long id, @CurrentUserId Long userId) {
+        beansService.delete(id, userId);
         return ResponseEntity.noContent().build();
     }
 }

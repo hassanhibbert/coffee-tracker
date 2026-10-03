@@ -21,9 +21,14 @@ public class Beans {
     @Column(name = "country_origin", nullable = false, length = 60)
     private String countryOrigin;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private AppUser owner;
+
     protected Beans() {}
 
-    public Beans(String name, RoastLevel roastLevel, String countryOrigin) {
+    public Beans(AppUser owner, String name, RoastLevel roastLevel, String countryOrigin) {
+        this.owner = owner;
         this.name = name;
         this.roastLevel = roastLevel;
         this.countryOrigin = countryOrigin;
@@ -55,5 +60,9 @@ public class Beans {
 
     public void setCountryOrigin(String countryOrigin) {
         this.countryOrigin = countryOrigin;
+    }
+
+    public AppUser getOwner() {
+        return owner;
     }
 }

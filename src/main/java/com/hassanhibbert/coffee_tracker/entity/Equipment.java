@@ -21,9 +21,14 @@ public class Equipment {
     @Column(name = "brand", length = 60)
     private String brand;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private AppUser owner;
+
     protected Equipment() {}
 
-    public Equipment(String name, BrewMethod method, String brand) {
+    public Equipment(AppUser owner, String name, BrewMethod method, String brand) {
+        this.owner = owner;
         this.name = name;
         this.method = method;
         this.brand = brand;
@@ -55,5 +60,9 @@ public class Equipment {
 
     public void setBrand(String brand) {
         this.brand = brand;
+    }
+
+    public AppUser getOwner() {
+        return owner;
     }
 }

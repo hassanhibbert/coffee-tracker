@@ -9,6 +9,7 @@ import com.hassanhibbert.coffee_tracker.entity.Equipment;
 import com.hassanhibbert.coffee_tracker.entity.GrindSize;
 import com.hassanhibbert.coffee_tracker.exception.BrewRuleViolationException;
 import com.hassanhibbert.coffee_tracker.exception.ResourceNotFoundException;
+import com.hassanhibbert.coffee_tracker.repository.AppUserRepository;
 import com.hassanhibbert.coffee_tracker.repository.BeansRepository;
 import com.hassanhibbert.coffee_tracker.repository.BrewsRepository;
 import com.hassanhibbert.coffee_tracker.repository.EquipmentRepository;
@@ -24,40 +25,47 @@ public class BrewsService {
     private final BrewsRepository brewsRepository;
     private final BeansRepository beansRepository;
     private final EquipmentRepository equipmentRepository;
+    private final AppUserRepository appUserRepository;
 
     public BrewsService(BrewsRepository brewsRepository, BeansRepository beansRepository,
-                        EquipmentRepository equipmentRepository) {
+                        EquipmentRepository equipmentRepository, AppUserRepository appUserRepository) {
         this.brewsRepository = brewsRepository;
         this.beansRepository = beansRepository;
         this.equipmentRepository = equipmentRepository;
+        this.appUserRepository = appUserRepository;
     }
 
-    public List<BrewResponse> findAll() {
-        return brewsRepository.findAllByOrderByBrewedAtDesc().stream().map(BrewResponse::fromEntity).toList();
+    public List<BrewResponse> findAll(Long ownerId) {
+        return brewsRepository.findAllByOwnerIdOrderByBrewedAtDesc(ownerId).stream()
+                .map(BrewResponse::fromEntity).toList();
     }
 
-    public BrewResponse findById(Long id) {
-        return BrewResponse.fromEntity(getEntity(id));
+    public BrewResponse findById(Long id, Long ownerId) {
+        return BrewResponse.fromEntity(getEntity(id, ownerId));
     }
 
     @Transactional
-    public BrewResponse create(BrewRequest request) {
-        Beans bean = findBean(request.beanId());
-        Equipment equipment = findEquipment(request.equipmentId());
+    public BrewResponse create(BrewRequest request, Long ownerId) {
+        // Looking up bean and equipment *by owner* is the IDOR check: a beanId belonging to
+        // another user is "not found", so nobody can attach brews to someone else's beans.
+        Beans bean = findBean(request.beanId(), ownerId);
+        Equipment equipment = findEquipment(request.equipmentId(), ownerId);
         checkGrindSuitsMethod(request.grindSize(), equipment);
         Instant brewedAt = request.brewedAt() != null ? request.brewedAt() : Instant.now();
 
-        Brews brew = new Brews(bean, equipment, request.grindSize(), request.coffeeGrams(), request.waterGrams(),
-                request.waterTempC(), request.brewTimeSeconds(), request.rating(), request.notes(), brewedAt);
+        Brews brew = new Brews(appUserRepository.getReferenceById(ownerId), bean, equipment, request.grindSize(),
+                request.coffeeGrams(), request.waterGrams(), request.waterTempC(), request.brewTimeSeconds(),
+                request.rating(), request.notes(), brewedAt);
         return BrewResponse.fromEntity(brewsRepository.save(brew));
     }
 
     @Transactional
-    public BrewResponse update(Long id, BrewRequest request) {
-        Brews brew = getEntity(id);
-        brew.setBean(findBean(request.beanId()));
-        Equipment equipment = findEquipment(request.equipmentId());
+    public BrewResponse update(Long id, BrewRequest request, Long ownerId) {
+        Brews brew = getEntity(id, ownerId);
+        Equipment equipment = findEquipment(request.equipmentId(), ownerId);
         checkGrindSuitsMethod(request.grindSize(), equipment);
+
+        brew.setBean(findBean(request.beanId(), ownerId));
         brew.setEquipment(equipment);
         brew.setGrindSize(request.grindSize());
         brew.setCoffeeGrams(request.coffeeGrams());
@@ -73,8 +81,8 @@ public class BrewsService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        brewsRepository.delete(getEntity(id));
+    public void delete(Long id, Long ownerId) {
+        brewsRepository.delete(getEntity(id, ownerId));
     }
 
     /**
@@ -89,15 +97,18 @@ public class BrewsService {
         }
     }
 
-    private Brews getEntity(Long id) {
-        return brewsRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Brew", id));
+    private Brews getEntity(Long id, Long ownerId) {
+        return brewsRepository.findByIdAndOwnerId(id, ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Brew", id));
     }
 
-    private Beans findBean(Long id) {
-        return beansRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Bean", id));
+    private Beans findBean(Long id, Long ownerId) {
+        return beansRepository.findByIdAndOwnerId(id, ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bean", id));
     }
 
-    private Equipment findEquipment(Long id) {
-        return equipmentRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Equipment", id));
+    private Equipment findEquipment(Long id, Long ownerId) {
+        return equipmentRepository.findByIdAndOwnerId(id, ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipment", id));
     }
 }

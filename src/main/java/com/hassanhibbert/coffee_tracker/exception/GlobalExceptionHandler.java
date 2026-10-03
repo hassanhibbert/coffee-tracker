@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -36,6 +37,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ResourceInUseException.class)
     public ProblemDetail handleInUse(ResourceInUseException ex) {
         return problem(HttpStatus.CONFLICT, "Resource in use", ex.getMessage());
+    }
+
+    @ExceptionHandler(UsernameTakenException.class)
+    public ProblemDetail handleUsernameTaken(UsernameTakenException ex) {
+        return problem(HttpStatus.CONFLICT, "Username taken", ex.getMessage());
+    }
+
+    /** Failed login. Thrown from AuthService, inside the controller, so it reaches this advice. */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ProblemDetail handleBadCredentials(BadCredentialsException ex) {
+        return problem(HttpStatus.UNAUTHORIZED, "Authentication failed", ex.getMessage());
     }
 
     @ExceptionHandler(BrewRuleViolationException.class)
