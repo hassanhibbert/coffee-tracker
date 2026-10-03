@@ -28,3 +28,23 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t coffee-tracker .
+
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      # Type-checks everything (tsc -b) and produces the production bundle.
+      - run: npm run build
