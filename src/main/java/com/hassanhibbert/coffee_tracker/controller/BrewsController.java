@@ -7,6 +7,7 @@ import com.hassanhibbert.coffee_tracker.dto.PageResponse;
 import com.hassanhibbert.coffee_tracker.service.BrewsService;
 import com.hassanhibbert.coffee_tracker.security.CurrentUserId;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -27,8 +28,8 @@ public class BrewsController {
 
     /** e.g. GET /api/v1/brews?method=ESPRESSO&minRating=4&page=0&size=20&sort=rating,desc */
     @GetMapping
-    public PageResponse<BrewResponse> searchBrews(@Valid BrewFilter filter,
-                                                  @PageableDefault(size = 20, sort = "brewedAt",
+    public PageResponse<BrewResponse> searchBrews(@ParameterObject @Valid BrewFilter filter,
+                                                  @ParameterObject @PageableDefault(size = 20, sort = "brewedAt",
                                                           direction = Sort.Direction.DESC) Pageable pageable,
                                                   @CurrentUserId Long userId) {
         return brewsService.search(userId, filter, pageable);
