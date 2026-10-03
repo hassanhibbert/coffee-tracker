@@ -1,0 +1,11 @@
+# Keep the build context small and secret-free.
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+HELP.md
+.env
+# Would otherwise be copied by "COPY src src" and baked into the image, local password included.
+src/main/resources/application-local.properties
+src/main/resources/application-*-local.properties
