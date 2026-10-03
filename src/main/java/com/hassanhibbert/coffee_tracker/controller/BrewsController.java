@@ -32,11 +32,12 @@ public class BrewsController {
 
     @PostMapping
     public  Brews createBrew(@RequestBody BrewRequest request) {
-        Beans bean = beansRepository.findById(request.getBeanId()).orElseThrow(() -> new RuntimeException("Bean not found"));
+        Beans bean = beansRepository.findById(request.beanId()).orElseThrow(() -> new RuntimeException("Bean not found"));
 
-        Equipment equipment = equipmentRepository.findById(request.getEquipmentId()).orElseThrow(()-> new RuntimeException("Equipment not found"));
+        Equipment equipment = equipmentRepository.findById(request.equipmentId()).orElseThrow(()-> new RuntimeException("Equipment not found"));
 
-        Brews brew = new Brews(bean, equipment, request.getGroundSize());
+        Brews brew = new Brews(bean, equipment, request.grindSize(), request.coffeeGrams(), request.waterGrams(),
+                request.waterTempC(), request.brewTimeSeconds(), request.rating(), request.notes(), request.brewedAt());
 
         return brewsRepository.save(brew);
     }
