@@ -1,5 +1,6 @@
 package com.hassanhibbert.coffee_tracker.controller;
 
+import com.hassanhibbert.coffee_tracker.dto.BeanResponse;
 import com.hassanhibbert.coffee_tracker.entity.Beans;
 import com.hassanhibbert.coffee_tracker.repository.BeansRepository;
 import org.springframework.web.bind.annotation.*;
@@ -16,13 +17,17 @@ public class BeansController {
     }
 
     @GetMapping
-    public List<Beans> getAllBeans() {
-        return beansRepository.findAll();
+    public List<BeanResponse> getAllBeans() {
+        return beansRepository.findAll()
+                .stream()
+                .map(BeanResponse::fromEntity)
+                .toList();
     }
 
     @PostMapping
-    public Beans createBean(@RequestBody Beans bean) {
-        return beansRepository.save(bean);
+    public BeanResponse createBean(@RequestBody Beans bean) {
+        Beans saved = beansRepository.save(bean);
+        return BeanResponse.fromEntity(saved);
     }
 
 }

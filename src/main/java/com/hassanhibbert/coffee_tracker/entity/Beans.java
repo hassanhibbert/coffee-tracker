@@ -7,14 +7,6 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "beans")
 public class Beans {
-    protected Beans() {}
-
-    public Beans(String name, String roastLevel, String countryOrigin) {
-        this.name = name;
-        this.roastLevel = roastLevel;
-        this.countryOrigin = countryOrigin;
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,6 +20,13 @@ public class Beans {
     @Column(name = "country_origin", nullable = false)
     private String countryOrigin;
 
+    protected Beans() {}
+
+    public Beans(String name, String roastLevel, String countryOrigin) {
+        this.name = name;
+        this.roastLevel = roastLevel;
+        this.countryOrigin = countryOrigin;
+    }
 
     public Long getId() {
         return id;
