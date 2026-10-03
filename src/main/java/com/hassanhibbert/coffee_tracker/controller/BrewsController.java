@@ -1,44 +1,50 @@
 package com.hassanhibbert.coffee_tracker.controller;
 
 import com.hassanhibbert.coffee_tracker.dto.BrewRequest;
-import com.hassanhibbert.coffee_tracker.entity.Beans;
-import com.hassanhibbert.coffee_tracker.entity.Brews;
-import com.hassanhibbert.coffee_tracker.entity.Equipment;
-import com.hassanhibbert.coffee_tracker.repository.BeansRepository;
-import com.hassanhibbert.coffee_tracker.repository.BrewsRepository;
-import com.hassanhibbert.coffee_tracker.repository.EquipmentRepository;
+import com.hassanhibbert.coffee_tracker.dto.BrewResponse;
+import com.hassanhibbert.coffee_tracker.service.BrewsService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/brews")
 public class BrewsController {
+    private final BrewsService brewsService;
 
-    private final BrewsRepository brewsRepository;
-    private final BeansRepository beansRepository;
-    private final EquipmentRepository equipmentRepository;
-
-    public BrewsController(BrewsRepository brewsRepository, BeansRepository beansRepository, EquipmentRepository equipmentRepository) {
-        this.brewsRepository = brewsRepository;
-        this.beansRepository = beansRepository;
-        this.equipmentRepository = equipmentRepository;
+    public BrewsController(BrewsService brewsService) {
+        this.brewsService = brewsService;
     }
 
     @GetMapping
-    public List<Brews> getAllBrews() {
-        return brewsRepository.findAll();
+    public List<BrewResponse> getAllBrews() {
+        return brewsService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public BrewResponse getBrew(@PathVariable Long id) {
+        return brewsService.findById(id);
     }
 
     @PostMapping
-    public  Brews createBrew(@RequestBody BrewRequest request) {
-        Beans bean = beansRepository.findById(request.beanId()).orElseThrow(() -> new RuntimeException("Bean not found"));
+    public ResponseEntity<BrewResponse> createBrew(@RequestBody BrewRequest request) {
+        BrewResponse created = brewsService.create(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(created.id()).toUri();
+        return ResponseEntity.created(location).body(created);
+    }
 
-        Equipment equipment = equipmentRepository.findById(request.equipmentId()).orElseThrow(()-> new RuntimeException("Equipment not found"));
+    @PutMapping("/{id}")
+    public BrewResponse updateBrew(@PathVariable Long id, @RequestBody BrewRequest request) {
+        return brewsService.update(id, request);
+    }
 
-        Brews brew = new Brews(bean, equipment, request.grindSize(), request.coffeeGrams(), request.waterGrams(),
-                request.waterTempC(), request.brewTimeSeconds(), request.rating(), request.notes(), request.brewedAt());
-
-        return brewsRepository.save(brew);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBrew(@PathVariable Long id) {
+        brewsService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
