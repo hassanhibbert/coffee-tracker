@@ -3,6 +3,7 @@ package com.hassanhibbert.coffee_tracker.dto;
 import com.hassanhibbert.coffee_tracker.entity.BrewMethod;
 import com.hassanhibbert.coffee_tracker.entity.Brews;
 import com.hassanhibbert.coffee_tracker.entity.GrindSize;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -16,10 +17,10 @@ public record BrewResponse(
         BigDecimal coffeeGrams,
         BigDecimal waterGrams,
         String ratio,
-        Integer waterTempC,
+        @Schema(nullable = true) Integer waterTempC,
         Integer brewTimeSeconds,
-        Integer rating,
-        String notes,
+        @Schema(nullable = true) Integer rating,
+        @Schema(nullable = true) String notes,
         Instant brewedAt
 ) {
     public record BeanSummary(Long id, String name) {}
