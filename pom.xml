@@ -11,8 +11,8 @@
 	<groupId>com.hassanhibbert</groupId>
 	<artifactId>coffee-tracker</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>coffee-tracker</name>
+	<description>REST API for logging coffee brews: beans, equipment and brew parameters</description>
 	<url/>
 	<licenses>
 		<license/>
