@@ -1,23 +1,31 @@
 package com.hassanhibbert.coffee_tracker.service;
 
+import com.hassanhibbert.coffee_tracker.dto.BrewFilter;
 import com.hassanhibbert.coffee_tracker.dto.BrewRequest;
 import com.hassanhibbert.coffee_tracker.dto.BrewResponse;
+import com.hassanhibbert.coffee_tracker.dto.PageResponse;
 import com.hassanhibbert.coffee_tracker.entity.Beans;
 import com.hassanhibbert.coffee_tracker.entity.BrewMethod;
 import com.hassanhibbert.coffee_tracker.entity.Brews;
 import com.hassanhibbert.coffee_tracker.entity.Equipment;
 import com.hassanhibbert.coffee_tracker.entity.GrindSize;
 import com.hassanhibbert.coffee_tracker.exception.BrewRuleViolationException;
+import com.hassanhibbert.coffee_tracker.exception.InvalidQueryException;
 import com.hassanhibbert.coffee_tracker.exception.ResourceNotFoundException;
 import com.hassanhibbert.coffee_tracker.repository.AppUserRepository;
 import com.hassanhibbert.coffee_tracker.repository.BeansRepository;
+import com.hassanhibbert.coffee_tracker.repository.BrewSpecifications;
 import com.hassanhibbert.coffee_tracker.repository.BrewsRepository;
 import com.hassanhibbert.coffee_tracker.repository.EquipmentRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -35,9 +43,25 @@ public class BrewsService {
         this.appUserRepository = appUserRepository;
     }
 
-    public List<BrewResponse> findAll(Long ownerId) {
-        return brewsRepository.findAllByOwnerIdOrderByBrewedAtDesc(ownerId).stream()
-                .map(BrewResponse::fromEntity).toList();
+    /**
+     * Sorting is client input too. Unchecked, ?sort=owner.passwordHash would be accepted, and the
+     * order of results would leak information about a column the client can't otherwise see.
+     */
+    static final Set<String> SORTABLE = Set.of("brewedAt", "rating", "coffeeGrams", "waterGrams", "brewTimeSeconds");
+
+    public PageResponse<BrewResponse> search(Long ownerId, BrewFilter filter, Pageable pageable) {
+        for (Sort.Order order : pageable.getSort()) {
+            if (!SORTABLE.contains(order.getProperty())) {
+                throw new InvalidQueryException("Cannot sort by '" + order.getProperty() + "'. Allowed: " + SORTABLE);
+            }
+        }
+        // Tie-breaker on id: rows with equal sort values otherwise have no defined order,
+        // and the same brew can appear on two pages (or none) as the user pages through.
+        Pageable stable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                pageable.getSort().and(Sort.by(Sort.Direction.DESC, "id")));
+
+        Page<Brews> page = brewsRepository.findAll(BrewSpecifications.matching(ownerId, filter), stable);
+        return PageResponse.from(page, BrewResponse::fromEntity);
     }
 
     public BrewResponse findById(Long id, Long ownerId) {

@@ -1,16 +1,20 @@
 package com.hassanhibbert.coffee_tracker.controller;
 
+import com.hassanhibbert.coffee_tracker.dto.BrewFilter;
 import com.hassanhibbert.coffee_tracker.dto.BrewRequest;
 import com.hassanhibbert.coffee_tracker.dto.BrewResponse;
+import com.hassanhibbert.coffee_tracker.dto.PageResponse;
 import com.hassanhibbert.coffee_tracker.service.BrewsService;
 import com.hassanhibbert.coffee_tracker.security.CurrentUserId;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/brews")
@@ -21,9 +25,13 @@ public class BrewsController {
         this.brewsService = brewsService;
     }
 
+    /** e.g. GET /api/v1/brews?method=ESPRESSO&minRating=4&page=0&size=20&sort=rating,desc */
     @GetMapping
-    public List<BrewResponse> getAllBrews(@CurrentUserId Long userId) {
-        return brewsService.findAll(userId);
+    public PageResponse<BrewResponse> searchBrews(@Valid BrewFilter filter,
+                                                  @PageableDefault(size = 20, sort = "brewedAt",
+                                                          direction = Sort.Direction.DESC) Pageable pageable,
+                                                  @CurrentUserId Long userId) {
+        return brewsService.search(userId, filter, pageable);
     }
 
     @GetMapping("/{id}")

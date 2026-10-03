@@ -50,6 +50,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.UNAUTHORIZED, "Authentication failed", ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidQueryException.class)
+    public ProblemDetail handleInvalidQuery(InvalidQueryException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid query", ex.getMessage());
+    }
+
     @ExceptionHandler(BrewRuleViolationException.class)
     public ProblemDetail handleBrewRule(BrewRuleViolationException ex) {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, "Brew rule violated", ex.getMessage());
