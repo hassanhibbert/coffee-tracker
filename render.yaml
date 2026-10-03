@@ -13,6 +13,12 @@ services:
     runtime: docker
     plan: free
     region: oregon
+    # Monorepo: build from server/ and only redeploy when server files change.
+    dockerContext: ./server
+    dockerfilePath: ./server/Dockerfile
+    buildFilter:
+      paths:
+        - server/**
     healthCheckPath: /actuator/health
     envVars:
       # Render hands over the parts; application.properties assembles the JDBC URL.

@@ -36,3 +36,13 @@ build/
 .env
 application-local.properties
 application-*-local.properties
+
+### Node / client ###
+node_modules/
+client/dist/
+client/coverage/
+*.local
+.env.local
+
+### Claude Code preview config (local) ###
+.claude/
