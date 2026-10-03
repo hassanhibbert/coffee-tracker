@@ -3,8 +3,11 @@ package com.hassanhibbert.coffee_tracker.service;
 import com.hassanhibbert.coffee_tracker.dto.BrewRequest;
 import com.hassanhibbert.coffee_tracker.dto.BrewResponse;
 import com.hassanhibbert.coffee_tracker.entity.Beans;
+import com.hassanhibbert.coffee_tracker.entity.BrewMethod;
 import com.hassanhibbert.coffee_tracker.entity.Brews;
 import com.hassanhibbert.coffee_tracker.entity.Equipment;
+import com.hassanhibbert.coffee_tracker.entity.GrindSize;
+import com.hassanhibbert.coffee_tracker.exception.BrewRuleViolationException;
 import com.hassanhibbert.coffee_tracker.exception.ResourceNotFoundException;
 import com.hassanhibbert.coffee_tracker.repository.BeansRepository;
 import com.hassanhibbert.coffee_tracker.repository.BrewsRepository;
@@ -41,6 +44,7 @@ public class BrewsService {
     public BrewResponse create(BrewRequest request) {
         Beans bean = findBean(request.beanId());
         Equipment equipment = findEquipment(request.equipmentId());
+        checkGrindSuitsMethod(request.grindSize(), equipment);
         Instant brewedAt = request.brewedAt() != null ? request.brewedAt() : Instant.now();
 
         Brews brew = new Brews(bean, equipment, request.grindSize(), request.coffeeGrams(), request.waterGrams(),
@@ -52,7 +56,9 @@ public class BrewsService {
     public BrewResponse update(Long id, BrewRequest request) {
         Brews brew = getEntity(id);
         brew.setBean(findBean(request.beanId()));
-        brew.setEquipment(findEquipment(request.equipmentId()));
+        Equipment equipment = findEquipment(request.equipmentId());
+        checkGrindSuitsMethod(request.grindSize(), equipment);
+        brew.setEquipment(equipment);
         brew.setGrindSize(request.grindSize());
         brew.setCoffeeGrams(request.coffeeGrams());
         brew.setWaterGrams(request.waterGrams());
@@ -69,6 +75,18 @@ public class BrewsService {
     @Transactional
     public void delete(Long id) {
         brewsRepository.delete(getEntity(id));
+    }
+
+    /**
+     * Cross-entity rule: it depends on the equipment row in the database, so it can't be a
+     * field annotation on BrewRequest. It lives here, where the equipment is already loaded.
+     */
+    private void checkGrindSuitsMethod(GrindSize grindSize, Equipment equipment) {
+        BrewMethod method = equipment.getMethod();
+        if (!method.accepts(grindSize)) {
+            throw new BrewRuleViolationException("Grind size " + grindSize + " does not suit " + method
+                    + " (expected " + method.getFinest() + " to " + method.getCoarsest() + ")");
+        }
     }
 
     private Brews getEntity(Long id) {

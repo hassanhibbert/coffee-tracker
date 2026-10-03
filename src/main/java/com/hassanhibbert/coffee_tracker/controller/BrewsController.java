@@ -3,6 +3,7 @@ package com.hassanhibbert.coffee_tracker.controller;
 import com.hassanhibbert.coffee_tracker.dto.BrewRequest;
 import com.hassanhibbert.coffee_tracker.dto.BrewResponse;
 import com.hassanhibbert.coffee_tracker.service.BrewsService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -30,7 +31,7 @@ public class BrewsController {
     }
 
     @PostMapping
-    public ResponseEntity<BrewResponse> createBrew(@RequestBody BrewRequest request) {
+    public ResponseEntity<BrewResponse> createBrew(@Valid @RequestBody BrewRequest request) {
         BrewResponse created = brewsService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.id()).toUri();
@@ -38,7 +39,7 @@ public class BrewsController {
     }
 
     @PutMapping("/{id}")
-    public BrewResponse updateBrew(@PathVariable Long id, @RequestBody BrewRequest request) {
+    public BrewResponse updateBrew(@PathVariable Long id, @Valid @RequestBody BrewRequest request) {
         return brewsService.update(id, request);
     }
 

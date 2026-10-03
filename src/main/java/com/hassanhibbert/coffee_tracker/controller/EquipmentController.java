@@ -3,6 +3,7 @@ package com.hassanhibbert.coffee_tracker.controller;
 import com.hassanhibbert.coffee_tracker.dto.EquipmentRequest;
 import com.hassanhibbert.coffee_tracker.dto.EquipmentResponse;
 import com.hassanhibbert.coffee_tracker.service.EquipmentService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -30,7 +31,7 @@ public class EquipmentController {
     }
 
     @PostMapping
-    public ResponseEntity<EquipmentResponse> createEquipment(@RequestBody EquipmentRequest request) {
+    public ResponseEntity<EquipmentResponse> createEquipment(@Valid @RequestBody EquipmentRequest request) {
         EquipmentResponse created = equipmentService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.id()).toUri();
@@ -38,7 +39,7 @@ public class EquipmentController {
     }
 
     @PutMapping("/{id}")
-    public EquipmentResponse updateEquipment(@PathVariable Long id, @RequestBody EquipmentRequest request) {
+    public EquipmentResponse updateEquipment(@PathVariable Long id, @Valid @RequestBody EquipmentRequest request) {
         return equipmentService.update(id, request);
     }
 

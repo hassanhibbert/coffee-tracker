@@ -3,6 +3,7 @@ package com.hassanhibbert.coffee_tracker.controller;
 import com.hassanhibbert.coffee_tracker.dto.BeanRequest;
 import com.hassanhibbert.coffee_tracker.dto.BeanResponse;
 import com.hassanhibbert.coffee_tracker.service.BeansService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -30,7 +31,7 @@ public class BeansController {
     }
 
     @PostMapping
-    public ResponseEntity<BeanResponse> createBean(@RequestBody BeanRequest request) {
+    public ResponseEntity<BeanResponse> createBean(@Valid @RequestBody BeanRequest request) {
         BeanResponse created = beansService.create(request);
         // 201 Created + a Location header pointing at the new resource.
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -39,7 +40,7 @@ public class BeansController {
     }
 
     @PutMapping("/{id}")
-    public BeanResponse updateBean(@PathVariable Long id, @RequestBody BeanRequest request) {
+    public BeanResponse updateBean(@PathVariable Long id, @Valid @RequestBody BeanRequest request) {
         return beansService.update(id, request);
     }
 
