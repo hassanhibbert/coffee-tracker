@@ -2,7 +2,10 @@
 # In the Render dashboard: New > Blueprint > pick this repo.
 databases:
   - name: coffee-tracker-db
-    plan: free
+    # Smallest paid plan: same size as free, but it doesn't expire after 30 days, and
+    # Render allows only one free database per workspace. Max 100 connections.
+    plan: 0.1c-256mb
+    diskSizeGB: 1
     region: oregon
     databaseName: coffee_tracker
     user: coffee_tracker
