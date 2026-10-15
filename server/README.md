@@ -13,6 +13,8 @@ No Lombok, on purpose: every constructor, getter and query is visible.
 
 - **Full CRUD** for beans, equipment and brews, layered `Controller → Service → Repository`
 - **JWT authentication** (register/login); every user sees only their own data
+- **Sample data** for new accounts, and a one-click **read-only demo** account
+- **Rate limiting** on sign-up, login and the demo (`429` with `Retry-After`)
 - **Validation** at two levels: Bean Validation on requests, and a domain rule that grind
   size must suit the brew method (no coarse grind for espresso)
 - **Consistent errors** as [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details
@@ -25,12 +27,14 @@ No Lombok, on purpose: every constructor, getter and query is visible.
 
 ## API
 
-All endpoints except `/api/v1/auth/**` require `Authorization: Bearer <token>`.
+All endpoints except `/api/v1/auth/**` require `Authorization: Bearer <token>`. Demo tokens
+can call every `GET`; any other method returns `403`.
 
 | Method | Path | Description |
 |---|---|---|
 | POST | `/api/v1/auth/register` | Create an account, returns a token |
 | POST | `/api/v1/auth/login` | Returns a token (valid 1 hour) |
+| POST | `/api/v1/auth/demo` | Returns a read-only token for the shared demo account |
 | GET / POST | `/api/v1/beans` | List / create beans |
 | GET / PUT / DELETE | `/api/v1/beans/{id}` | Read / replace / delete a bean |
 | GET / POST | `/api/v1/equipment` | List / create equipment |
@@ -124,7 +128,10 @@ cd server && ./mvnw test
 | Unit | JUnit 5, Mockito | Grind rule, ratio maths, ownership checks, sort whitelist, login behaviour |
 | Web slice | `@WebMvcTest` + real security config | Status codes, validation errors, JWT → user id |
 | Repository | `@DataJpaTest` + Testcontainers Postgres | Specifications, JPQL stats, DB `CHECK` constraints |
-| End to end | `@SpringBootTest` + Testcontainers | Register → log brew → users isolated; forged tokens rejected |
+| End to end | `@SpringBootTest` + Testcontainers | Register → log brew; sample data; forged tokens rejected |
+| Isolation | `@SpringBootTest` + Testcontainers | Two users: every read, list, filter, stat, update, delete and cross-reference of the other's data is a `404` |
+| Rate limits | Real Tomcat on a random port + `HttpClient` | `429` + `Retry-After`; spoofed `X-Forwarded-For` doesn't reset a limit; per-username limit across IPs |
+| Demo | `@SpringBootTest` + Testcontainers | Demo can read, every write is `403`, the username can't be registered |
 
 Repository and end-to-end tests run against a real PostgreSQL 18 container, not H2, so they
 exercise the same SQL dialect, constraints and Flyway migrations as production. Without Docker
@@ -133,12 +140,16 @@ they are skipped rather than failed; CI always runs them.
 ## Deployment (Render)
 
 The repo includes a [Render Blueprint](../render.yaml). In Render, choose **New → Blueprint** and
-pick this repository. Render provisions a free Postgres instance and builds the
-[Dockerfile](Dockerfile), wires the database credentials into the service, and generates
-`JWT_SECRET`.
+pick this repository. Render provisions Postgres, builds the [Dockerfile](Dockerfile), wires
+the database credentials into the service, and generates `JWT_SECRET`.
 
-> Free Render services sleep when idle, so the first request after a while takes ~30–60 s
-> while the JVM starts. Free databases expire after 30 days.
+Both run on Render's smallest paid plans: the API stays awake (free services sleep, and the
+JVM then takes ~30–60 s to start on the next request), and the database doesn't expire (free
+ones do after 30 days).
+
+Rate limits can be tuned with `RATE_LIMIT_LOGIN_PER_IP_PER_MINUTE`,
+`RATE_LIMIT_LOGIN_PER_USERNAME_PER_15_MINUTES`, `RATE_LIMIT_REGISTER_PER_IP_PER_HOUR` and
+`RATE_LIMIT_DEMO_PER_IP_PER_HOUR`.
 
 ## Design notes
 
@@ -156,6 +167,20 @@ pick this repository. Render provisions a free Postgres instance and builds the
 - **Stateless JWT.** HS256 tokens with a short TTL, verified by Spring Security's resource
   server. BCrypt passwords; login takes the same time for unknown users and wrong passwords,
   so it can't be used to discover usernames.
+- **Rate limits before work.** Token buckets (Bucket4j) in a bounded, expiring Caffeine cache,
+  checked before BCrypt or any query. Per IP *and* per username for login, so neither one
+  client spraying many accounts nor many IPs attacking one account gets far. Limits live in
+  memory, so they're per instance; scaling out would need a shared store such as Redis.
+- **Real client IPs.** `server.forward-headers-strategy=native` lets Tomcat take the client
+  address from `X-Forwarded-For`, but only when the request comes from an internal proxy,
+  reading from the right so a client-supplied value can't override the proxy's.
+- **A read-only demo by scope.** The demo token carries the OAuth2 claim `scope: demo`; Spring
+  Security maps it to `SCOPE_demo`, and one authorization rule refuses non-GET requests from
+  it. There's no password to publish, and its username contains a space, which registration
+  rejects, so nobody can claim it first.
+- **Sample data through the services.** New accounts are seeded via the same services the API
+  uses (so the grind rules apply), inside the registration transaction: the account and its
+  data commit together or not at all.
 
 ## Project structure
 
