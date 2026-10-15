@@ -19,7 +19,7 @@ ratio, temperature, time, and how good the cup was.
   the server; the client renders the server's RFC 9457 errors next to the right fields.
 - **Tested at every layer.** JUnit/Mockito units, Spring slice tests, Testcontainers
   against real Postgres, and React Testing Library + MSW on the client.
-- **Deployable.** Dockerfile + Render Blueprint (API, database, static client) and GitHub
+- **Deployable.** Dockerfile + Render Blueprint (API, database), the client on DreamHost, and GitHub
   Actions CI for both apps.
 
 ## Quick start
@@ -48,6 +48,6 @@ API docs: http://localhost:8080/swagger-ui.html.
 .
 ├── server/                 Spring Boot API (Maven), Dockerfile
 ├── client/                 React app (Vite)
-├── render.yaml             Render Blueprint: Postgres + API + static client
+├── render.yaml             Render Blueprint: Postgres + API
 └── .github/workflows/      CI: server (tests + Docker build) and client (lint, test, build)
 ```
