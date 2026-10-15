@@ -13,6 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,7 +46,8 @@ class CoffeeTrackerApplicationTests {
                  "waterGrams": 250, "waterTempC": 94, "brewTimeSeconds": 180, "rating": 4}
                 """.formatted(beanId, equipmentId));
 
-        mvc.perform(get("/api/v1/brews").header("Authorization", "Bearer " + alice))
+        // Filtered by this bean: new accounts also start with sample brews.
+        mvc.perform(get("/api/v1/brews?beanId=" + beanId).header("Authorization", "Bearer " + alice))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].ratio").value("1:16.7"));
@@ -53,8 +55,30 @@ class CoffeeTrackerApplicationTests {
         // Bob is authenticated, but authentication isn't authorization: alice's bean is invisible to him.
         mvc.perform(get("/api/v1/beans/" + beanId).header("Authorization", "Bearer " + bob))
                 .andExpect(status().isNotFound());
-        mvc.perform(get("/api/v1/brews").header("Authorization", "Bearer " + bob))
+        mvc.perform(get("/api/v1/brews?beanId=" + beanId).header("Authorization", "Bearer " + bob))
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void newAccountStartsWithItsOwnSampleData() throws Exception {
+        // Registration succeeding at all proves every sample brew passed the grind rules:
+        // seeding goes through the services, inside the registration transaction.
+        String dana = register("dana_it");
+
+        mvc.perform(get("/api/v1/stats").header("Authorization", "Bearer " + dana))
+                .andExpect(jsonPath("$.totalBrews").value(8))
+                .andExpect(jsonPath("$.byMethod.length()").value(3));
+        mvc.perform(get("/api/v1/beans").header("Authorization", "Bearer " + dana))
+                .andExpect(jsonPath("$.length()").value(3));
+
+        // It's ordinary data owned by the user: they can delete it.
+        String json = mvc.perform(get("/api/v1/brews").header("Authorization", "Bearer " + dana))
+                .andReturn().getResponse().getContentAsString();
+        long sampleBrew = Long.parseLong(extract(json, "\"id\":(\\d+)"));
+        mvc.perform(delete("/api/v1/brews/" + sampleBrew).header("Authorization", "Bearer " + dana))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/stats").header("Authorization", "Bearer " + dana))
+                .andExpect(jsonPath("$.totalBrews").value(7));
     }
 
     @Test

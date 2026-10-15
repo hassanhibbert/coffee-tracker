@@ -4,6 +4,7 @@ import com.hassanhibbert.coffee_tracker.entity.AppUser;
 import com.hassanhibbert.coffee_tracker.exception.UsernameTakenException;
 import com.hassanhibbert.coffee_tracker.repository.AppUserRepository;
 import com.hassanhibbert.coffee_tracker.security.TokenService;
+import com.hassanhibbert.coffee_tracker.service.SampleDataService;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,14 +17,16 @@ public class AuthService {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final SampleDataService sampleDataService;
     // Hash of a throwaway password, computed once. See login().
     private final String dummyHash;
 
     public AuthService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                       TokenService tokenService) {
+                       TokenService tokenService, SampleDataService sampleDataService) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
+        this.sampleDataService = sampleDataService;
         this.dummyHash = passwordEncoder.encode("timing-equalizer-password");
     }
 
@@ -34,6 +37,8 @@ public class AuthService {
         }
         AppUser user = appUserRepository.save(
                 new AppUser(request.username(), passwordEncoder.encode(request.password())));
+        // Same transaction: the account and its sample data are committed together or not at all.
+        sampleDataService.addTo(user.getId());
         return TokenResponse.bearer(tokenService.issue(user), tokenService.ttlSeconds());
     }
 

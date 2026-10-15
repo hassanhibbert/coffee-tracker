@@ -4,6 +4,7 @@ import com.hassanhibbert.coffee_tracker.entity.AppUser;
 import com.hassanhibbert.coffee_tracker.exception.UsernameTakenException;
 import com.hassanhibbert.coffee_tracker.repository.AppUserRepository;
 import com.hassanhibbert.coffee_tracker.security.TokenService;
+import com.hassanhibbert.coffee_tracker.service.SampleDataService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -25,6 +26,7 @@ class AuthServiceTest {
     private AppUserRepository users;
     private PasswordEncoder encoder;
     private TokenService tokens;
+    private SampleDataService sampleData;
     private AuthService authService;
 
     @BeforeEach
@@ -32,8 +34,9 @@ class AuthServiceTest {
         users = mock(AppUserRepository.class);
         encoder = mock(PasswordEncoder.class);
         tokens = mock(TokenService.class);
+        sampleData = mock(SampleDataService.class);
         when(encoder.encode(anyString())).thenAnswer(call -> "hashed:" + call.getArgument(0));
-        authService = new AuthService(users, encoder, tokens);
+        authService = new AuthService(users, encoder, tokens, sampleData);
     }
 
     @Test
@@ -70,11 +73,23 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_givesTheNewAccountSampleData() {
+        when(users.existsByUsername("alice")).thenReturn(false);
+        when(users.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
+        when(tokens.issue(any())).thenReturn("token");
+
+        authService.register(new RegisterRequest("alice", "correct-horse"));
+
+        verify(sampleData).addTo(any());
+    }
+
+    @Test
     void register_takenUsername_isRejected() {
         when(users.existsByUsername("alice")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(new RegisterRequest("alice", "correct-horse")))
                 .isInstanceOf(UsernameTakenException.class);
         verify(users, never()).save(any());
+        verify(sampleData, never()).addTo(any());
     }
 }

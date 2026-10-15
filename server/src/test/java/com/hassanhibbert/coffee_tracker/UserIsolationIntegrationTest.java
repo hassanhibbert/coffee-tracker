@@ -60,6 +60,8 @@ class UserIsolationIntegrationTest {
         // Unique names: the Spring context and its database are shared across test methods.
         alice = register("alice_" + shortId());
         bob = register("bob_" + shortId());
+        // New accounts start with sample data, so the checks below look for Alice's ids
+        // instead of expecting Bob's lists to be empty.
         aliceBean = createAndGetId(alice, "/api/v1/beans", BEAN);
         aliceEquipment = createAndGetId(alice, "/api/v1/equipment", EQUIPMENT);
         aliceBrew = createAndGetId(alice, "/api/v1/brews", BREW.formatted(aliceBean, aliceEquipment));
