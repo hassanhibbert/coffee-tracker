@@ -60,11 +60,17 @@ src/
 - The JWT is kept in memory and mirrored to `sessionStorage` (survives refresh, cleared when
   the tab closes). It's readable by JavaScript, so XSS is the risk; mitigations are React's
   output escaping, no `dangerouslySetInnerHTML`, and a strict **Content-Security-Policy** in
-  production (see [render.yaml](../render.yaml)).
+  production (see [public/.htaccess](public/.htaccess)).
 - Route guards are UX only; the API enforces auth on every request. A `401` from the API logs
   the user out, and logging out clears the query cache so no previous user's data lingers.
 
 ## Deployment
 
-Built as a static site by the [Render Blueprint](../render.yaml). `VITE_API_BASE_URL` points
-the bundle at the API, and the API's `CORS_ALLOWED_ORIGINS` allows this site's origin.
+Hosted on DreamHost (Apache) at https://coffee.hassanhibbert.com. `npm run deploy` builds the
+bundle and rsyncs `dist/` to the server; copy `.env.deploy.example` to `.env.deploy.local` and
+fill it in first. `npm run deploy -- --dry-run` shows what would change without uploading.
+
+- `VITE_API_BASE_URL` points the bundle at the API (on Render), and the API's
+  `CORS_ALLOWED_ORIGINS` allows this site's origin.
+- [public/.htaccess](public/.htaccess) ships with the build: the SPA rewrite (deep links serve
+  `index.html`), the Content-Security-Policy and other security headers, and cache rules.
