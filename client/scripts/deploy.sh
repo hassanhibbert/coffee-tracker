@@ -41,9 +41,13 @@ if [ "${DEPLOY_PATH%/}" = "" ] || [ "${DEPLOY_PATH%/}" = "/" ] \
   exit 1
 fi
 
-RSYNC_FLAGS=(-avz --delete)
+# .dh-diag is DreamHost's diagnostics link in every site folder: excluded files are
+# neither uploaded nor deleted by --delete.
+RSYNC_FLAGS=(-avz --delete --exclude=.dh-diag)
+DRY_RUN=false
 if [ "${1:-}" = "--dry-run" ]; then
   RSYNC_FLAGS+=(--dry-run)
+  DRY_RUN=true
   echo "Dry run: nothing will be uploaded."
 fi
 
@@ -59,4 +63,8 @@ fi
 echo "Uploading dist/ to $DEPLOY_HOST:$DEPLOY_PATH..."
 rsync "${RSYNC_FLAGS[@]}" "$CLIENT_DIR/dist/" "$DEPLOY_USER@$DEPLOY_HOST:${DEPLOY_PATH%/}/"
 
-echo "Deploy complete."
+if [ "$DRY_RUN" = true ]; then
+  echo "Dry run complete: nothing was uploaded."
+else
+  echo "Deploy complete."
+fi
