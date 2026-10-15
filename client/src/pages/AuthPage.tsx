@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, type Location } from 'react-router'
 import { api, ApiError, unwrap } from '../api/client'
@@ -10,7 +10,8 @@ import { TextField } from '../components/ui/Field'
 type Mode = 'login' | 'register'
 
 export function AuthPage({ mode }: { mode: Mode }) {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, isDemo, login } = useAuth()
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
   const [username, setUsername] = useState('')
@@ -26,13 +27,25 @@ export function AuthPage({ mode }: { mode: Mode }) {
         ? unwrap(api.POST('/api/v1/auth/login', { body }))
         : unwrap(api.POST('/api/v1/auth/register', { body }))
     },
-    onSuccess: (token) => {
-      login(token.accessToken)
-      navigate(from, { replace: true })
-    },
+    onSuccess: (token) => signIn(token.accessToken, from),
   })
 
-  if (isAuthenticated) {
+  // No form, no password: the server hands out a read-only token for the shared demo account.
+  const demo = useMutation({
+    mutationFn: () => unwrap(api.POST('/api/v1/auth/demo')),
+    onSuccess: (token) => signIn(token.accessToken, '/'),
+  })
+
+  // Drop every cached response before switching accounts (e.g. demo -> a new account), so the
+  // next dashboard can't briefly show the previous account's brews.
+  function signIn(accessToken: string, destination: string) {
+    queryClient.clear()
+    login(accessToken)
+    navigate(destination, { replace: true })
+  }
+
+  // The demo is allowed here: it's how a demo visitor gets to the sign-up form.
+  if (isAuthenticated && !isDemo) {
     return <Navigate to={from} replace />
   }
 
@@ -42,6 +55,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   }
 
   const error = submit.error instanceof ApiError ? submit.error : null
+  const demoError = demo.error instanceof ApiError ? demo.error : null
   const isLogin = mode === 'login'
 
   return (
@@ -81,6 +95,14 @@ export function AuthPage({ mode }: { mode: Mode }) {
             {submit.isPending ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}
           </Button>
         </form>
+
+        <div className="mt-6 space-y-3 rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-stone-200">
+          <p className="text-sm text-stone-600">Just looking? Explore a read-only account full of sample brews.</p>
+          {demoError && <Alert>{demoError.message}</Alert>}
+          <Button variant="secondary" className="w-full" onClick={() => demo.mutate()} disabled={demo.isPending}>
+            {demo.isPending ? 'Opening the demo…' : 'Try the demo'}
+          </Button>
+        </div>
 
         <p className="mt-6 text-center text-sm text-stone-600">
           {isLogin ? 'New here? ' : 'Already have an account? '}

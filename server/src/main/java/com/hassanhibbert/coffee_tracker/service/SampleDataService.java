@@ -23,7 +23,7 @@ import java.time.Instant;
  */
 @Service
 public class SampleDataService {
-    private static final String NOTE_SUFFIX = " (Sample brew: edit or delete it anytime.)";
+    private static final String EDITABLE_NOTE = " (Sample brew: edit or delete it anytime.)";
 
     private final BeansService beansService;
     private final EquipmentService equipmentService;
@@ -42,6 +42,16 @@ public class SampleDataService {
      */
     @Transactional
     public void addTo(Long ownerId) {
+        addTo(ownerId, EDITABLE_NOTE);
+    }
+
+    /** For the read-only demo account, whose brews can't be edited, so the notes don't say they can. */
+    @Transactional
+    public void addToReadOnlyDemo(Long ownerId) {
+        addTo(ownerId, "");
+    }
+
+    private void addTo(Long ownerId, String noteSuffix) {
         long ethiopia = beansService.create(
                 new BeanRequest("Yirgacheffe", RoastLevel.LIGHT, "Ethiopia"), ownerId).id();
         long colombia = beansService.create(
@@ -57,29 +67,29 @@ public class SampleDataService {
                 new EquipmentRequest("Phin filter", BrewMethod.PHIN, null), ownerId).id();
 
         Instant now = Instant.now();
-        brew(ownerId, ethiopia, v60, GrindSize.MEDIUM, "15", "250", 94, 180, 5, daysAgo(now, 1),
+        brew(ownerId, noteSuffix, ethiopia, v60, GrindSize.MEDIUM, "15", "250", 94, 180, 5, daysAgo(now, 1),
                 "Bright and floral, jasmine and lemon.");
-        brew(ownerId, ethiopia, v60, GrindSize.MEDIUM_FINE, "15", "250", 94, 225, 3, daysAgo(now, 3),
+        brew(ownerId, noteSuffix, ethiopia, v60, GrindSize.MEDIUM_FINE, "15", "250", 94, 225, 3, daysAgo(now, 3),
                 "Too fine: slow drawdown, bitter finish.");
-        brew(ownerId, colombia, v60, GrindSize.MEDIUM, "20", "320", 93, 200, 4, daysAgo(now, 4),
+        brew(ownerId, noteSuffix, colombia, v60, GrindSize.MEDIUM, "20", "320", 93, 200, 4, daysAgo(now, 4),
                 "Caramel and red apple. Balanced.");
-        brew(ownerId, colombia, aeropress, GrindSize.FINE, "17", "220", 85, 120, 4, daysAgo(now, 6),
+        brew(ownerId, noteSuffix, colombia, aeropress, GrindSize.FINE, "17", "220", 85, 120, 4, daysAgo(now, 6),
                 "Inverted method. Chocolatey and clean.");
-        brew(ownerId, ethiopia, aeropress, GrindSize.MEDIUM, "15", "230", 88, 150, 5, daysAgo(now, 8),
+        brew(ownerId, noteSuffix, ethiopia, aeropress, GrindSize.MEDIUM, "15", "230", 88, 150, 5, daysAgo(now, 8),
                 "Lower temperature kept it sweet.");
-        brew(ownerId, vietnam, phin, GrindSize.MEDIUM, "20", "90", 98, 300, 5, daysAgo(now, 9),
+        brew(ownerId, noteSuffix, vietnam, phin, GrindSize.MEDIUM, "20", "90", 98, 300, 5, daysAgo(now, 9),
                 "Over condensed milk. Strong, syrupy, perfect.");
-        brew(ownerId, vietnam, phin, GrindSize.FINE, "20", "90", 98, 420, 2, daysAgo(now, 11),
+        brew(ownerId, noteSuffix, vietnam, phin, GrindSize.FINE, "20", "90", 98, 420, 2, daysAgo(now, 11),
                 "Too fine: the phin choked and dripped forever.");
-        brew(ownerId, colombia, aeropress, GrindSize.MEDIUM, "16", "240", 90, 105, 3, daysAgo(now, 13),
+        brew(ownerId, noteSuffix, colombia, aeropress, GrindSize.MEDIUM, "16", "240", 90, 105, 3, daysAgo(now, 13),
                 "A bit thin. Try a longer steep.");
     }
 
-    private void brew(Long ownerId, long beanId, long equipmentId, GrindSize grind, String coffeeGrams,
+    private void brew(Long ownerId, String noteSuffix, long beanId, long equipmentId, GrindSize grind, String coffeeGrams,
                       String waterGrams, int waterTempC, int brewTimeSeconds, int rating, Instant brewedAt,
                       String notes) {
         brewsService.create(new BrewRequest(beanId, equipmentId, grind, new BigDecimal(coffeeGrams),
-                new BigDecimal(waterGrams), waterTempC, brewTimeSeconds, rating, notes + NOTE_SUFFIX,
+                new BigDecimal(waterGrams), waterTempC, brewTimeSeconds, rating, notes + noteSuffix,
                 brewedAt), ownerId);
     }
 

@@ -11,6 +11,11 @@ describe('decodeToken', () => {
     expect(claims!.expiresAt.getTime()).toBeGreaterThan(Date.now())
   })
 
+  it('recognises the read-only demo token by its scope', () => {
+    expect(decodeToken(fakeToken({ scope: 'demo' }))?.isDemo).toBe(true)
+    expect(decodeToken(fakeToken())?.isDemo).toBe(false)
+  })
+
   it('returns null for garbage instead of throwing', () => {
     expect(decodeToken('not-a-jwt')).toBeNull()
   })

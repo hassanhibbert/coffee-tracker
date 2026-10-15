@@ -92,4 +92,57 @@ describe('authentication', () => {
     expect(tokenStore.get()).toBeNull()
     expect(router.state.location.pathname).toBe('/login')
   })
+  it('opens the read-only demo in one click and says so', async () => {
+    server.use(
+      http.post('*/api/v1/auth/demo', () =>
+        HttpResponse.json({ accessToken: fakeToken({ username: 'Demo Brewer', scope: 'demo' }), tokenType: 'Bearer', expiresIn: 3600 }),
+      ),
+      http.get('*/api/v1/stats', () => HttpResponse.json(emptyStats)),
+      http.get('*/api/v1/brews', () => HttpResponse.json(emptyPage)),
+    )
+    const user = userEvent.setup()
+    renderApp('/login')
+
+    await user.click(await screen.findByRole('button', { name: 'Try the demo' }))
+
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.getByText(/read-only demo/i)).toBeInTheDocument()
+    expect(screen.getByText('Demo Brewer')).toBeInTheDocument()
+  })
+
+  it('goes from the demo to sign-up, and the new account replaces the demo', async () => {
+    tokenStore.set(fakeToken({ username: 'Demo Brewer', scope: 'demo' }))
+    server.use(
+      http.post('*/api/v1/auth/register', () =>
+        HttpResponse.json({ accessToken: fakeToken({ username: 'newbie' }), tokenType: 'Bearer', expiresIn: 3600 }, { status: 201 }),
+      ),
+      http.get('*/api/v1/stats', () => HttpResponse.json(emptyStats)),
+      http.get('*/api/v1/brews', () => HttpResponse.json(emptyPage)),
+    )
+    const user = userEvent.setup()
+    const { router } = renderApp('/')
+
+    await user.click(await screen.findByRole('link', { name: 'Create your own account' }))
+
+    expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/register')
+
+    await user.type(screen.getByLabelText('Username'), 'newbie')
+    await user.type(screen.getByLabelText('Password'), 'correct-horse')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(await screen.findByText('newbie')).toBeInTheDocument()
+    expect(screen.queryByText(/read-only demo/i)).not.toBeInTheDocument()
+  })
+
+  it('shows no demo banner for a normal account', async () => {
+    server.use(
+      http.get('*/api/v1/stats', () => HttpResponse.json(emptyStats)),
+      http.get('*/api/v1/brews', () => HttpResponse.json(emptyPage)),
+    )
+    renderApp('/', { loggedIn: true })
+
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(screen.queryByText(/read-only demo/i)).not.toBeInTheDocument()
+  })
 })

@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirements // these endpoints are public: no lock icon in Swagger UI
 public class AuthController {
     private final AuthService authService;
+    private final DemoAccountService demoAccountService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, DemoAccountService demoAccountService) {
         this.authService = authService;
+        this.demoAccountService = demoAccountService;
     }
 
     @PostMapping("/register")
@@ -27,5 +29,11 @@ public class AuthController {
         // getRemoteAddr() is the real client IP behind Render's proxy because of
         // server.forward-headers-strategy=native (see application.properties).
         return authService.login(request, http.getRemoteAddr());
+    }
+
+    /** A read-only token for the shared demo account: one click, no sign-up, no password. */
+    @PostMapping("/demo")
+    public TokenResponse demo(HttpServletRequest http) {
+        return demoAccountService.demoToken(http.getRemoteAddr());
     }
 }

@@ -6,6 +6,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -18,6 +24,8 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -46,10 +54,38 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/health", "/error").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Reading needs any valid token; changing anything needs a token without the
+                        // demo scope. The demo account can look around but never write.
+                        .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
+                        .requestMatchers("/api/**").access(writableAccount())
                         .anyRequest().authenticated())
+                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(accessDeniedHandler()))
                 // Validates "Authorization: Bearer <jwt>" on every request using the JwtDecoder below.
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
+    }
+
+    /** Authenticated, and not the read-only demo (whose token carries scope "demo"). */
+    private static AuthorizationManager<RequestAuthorizationContext> writableAccount() {
+        return AuthorizationManagers.allOf(
+                AuthenticatedAuthorizationManager.authenticated(),
+                AuthorizationManagers.not(AuthorityAuthorizationManager.hasAuthority("SCOPE_" + TokenService.DEMO_SCOPE)));
+    }
+
+    /**
+     * The default 403 has an empty body. Return a ProblemDetail like every other error, so the
+     * client can show why. Ownership failures are 404s (see the services), so today the only 403
+     * is a demo write; give this a general message if another kind of 403 is ever added.
+     * The text is fixed (nothing from the request), so writing the JSON by hand is safe.
+     */
+    private static AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, denied) -> {
+            response.setStatus(403);
+            response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            response.getWriter().write("""
+                    {"type":"about:blank","title":"Read-only demo","status":403,\
+                    "detail":"The demo account is read-only. Create a free account to log your own brews."}""");
+        };
     }
 
     /**

@@ -5,9 +5,9 @@ import { tokenStore } from '../auth/tokenStore'
 import { routes } from '../routes'
 
 /** A JWT-shaped string the client can decode. The signature is junk: only the server checks it. */
-export function fakeToken({ username = 'alice', expiresInSeconds = 3600 } = {}) {
+export function fakeToken({ username = 'alice', expiresInSeconds = 3600, scope = undefined as string | undefined } = {}) {
   const encode = (value: object) => btoa(JSON.stringify(value)).replace(/=+$/, '')
-  const payload = { sub: '1', username, exp: Math.floor(Date.now() / 1000) + expiresInSeconds }
+  const payload = { sub: '1', username, exp: Math.floor(Date.now() / 1000) + expiresInSeconds, scope }
   return `${encode({ alg: 'HS256' })}.${encode(payload)}.signature`
 }
 

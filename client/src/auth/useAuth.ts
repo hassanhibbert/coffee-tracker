@@ -35,6 +35,7 @@ export function useAuth() {
   return {
     isAuthenticated: claims !== null,
     username: claims?.username ?? null,
+    isDemo: claims?.isDemo ?? false,
     login: tokenStore.set,
     logout,
   }
