@@ -52,6 +52,10 @@ export function BeansPage() {
       <Card className="mb-6">
         <h2 className="mb-4 font-medium">{editing ? `Edit ${editing.name}` : 'Add a bean'}</h2>
         <form onSubmit={handleSubmit} noValidate className="grid gap-4 sm:grid-cols-4 sm:items-start">
+          {/* Errors that aren't about one field (e.g. the read-only demo, a conflict) */}
+          {error && Object.keys(error.fieldErrors).length === 0 && (
+            <div className="sm:col-span-4"><Alert>{error.message}</Alert></div>
+          )}
           <TextField label="Name" value={values.name} placeholder="Ethiopia Guji"
             onChange={(e) => setValues({ ...values, name: e.target.value })} error={error?.fieldErrors.name} />
           <SelectField label="Roast" value={values.roastLevel}
