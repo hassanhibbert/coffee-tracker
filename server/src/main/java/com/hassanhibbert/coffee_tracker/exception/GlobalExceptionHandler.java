@@ -50,6 +50,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.UNAUTHORIZED, "Authentication failed", ex.getMessage());
     }
 
+    /** Rate limit hit. Retry-After tells well-behaved clients exactly how long to wait. */
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ProblemDetail> handleTooManyRequests(TooManyRequestsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(problem(HttpStatus.TOO_MANY_REQUESTS, "Too many requests", ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidQueryException.class)
     public ProblemDetail handleInvalidQuery(InvalidQueryException ex) {
         return problem(HttpStatus.BAD_REQUEST, "Invalid query", ex.getMessage());

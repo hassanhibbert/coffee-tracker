@@ -1,5 +1,6 @@
 package com.hassanhibbert.coffee_tracker.security;
 
+import com.hassanhibbert.coffee_tracker.auth.RateLimitProperties;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -27,7 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, RateLimitProperties.class})
 public class SecurityConfig {
 
     @Bean

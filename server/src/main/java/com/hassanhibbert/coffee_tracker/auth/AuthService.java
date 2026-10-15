@@ -18,20 +18,25 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final SampleDataService sampleDataService;
+    private final AuthRateLimiter rateLimiter;
     // Hash of a throwaway password, computed once. See login().
     private final String dummyHash;
 
     public AuthService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder,
-                       TokenService tokenService, SampleDataService sampleDataService) {
+                       TokenService tokenService, SampleDataService sampleDataService,
+                       AuthRateLimiter rateLimiter) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
         this.sampleDataService = sampleDataService;
+        this.rateLimiter = rateLimiter;
         this.dummyHash = passwordEncoder.encode("timing-equalizer-password");
     }
 
     @Transactional
-    public TokenResponse register(RegisterRequest request) {
+    public TokenResponse register(RegisterRequest request, String clientIp) {
+        // Before any database work: a rejected attempt should cost the server as little as possible.
+        rateLimiter.checkRegister(clientIp);
         if (appUserRepository.existsByUsername(request.username())) {
             throw new UsernameTakenException(request.username());
         }
@@ -43,7 +48,10 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public TokenResponse login(LoginRequest request) {
+    public TokenResponse login(LoginRequest request, String clientIp) {
+        // Before BCrypt: hashing is deliberately slow, so unlimited attempts would also be a cheap way
+        // to burn the server's CPU.
+        rateLimiter.checkLogin(clientIp, request.username());
         Optional<AppUser> user = appUserRepository.findByUsername(request.username());
         // Always run one BCrypt comparison, even for unknown usernames. Otherwise "no such user"
         // answers in ~1ms and "wrong password" in ~100ms, and an attacker can enumerate usernames.
@@ -53,6 +61,7 @@ public class AuthService {
             // Same message for both cases, for the same reason.
             throw new BadCredentialsException("Invalid username or password");
         }
+        rateLimiter.loginSucceeded(request.username());
         return TokenResponse.bearer(tokenService.issue(user.get()), tokenService.ttlSeconds());
     }
 }

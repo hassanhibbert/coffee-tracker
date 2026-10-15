@@ -1,5 +1,6 @@
 package com.hassanhibbert.coffee_tracker.auth;
 
+import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -17,12 +18,14 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public TokenResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public TokenResponse register(@Valid @RequestBody RegisterRequest request, HttpServletRequest http) {
+        return authService.register(request, http.getRemoteAddr());
     }
 
     @PostMapping("/login")
-    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        // getRemoteAddr() is the real client IP behind Render's proxy because of
+        // server.forward-headers-strategy=native (see application.properties).
+        return authService.login(request, http.getRemoteAddr());
     }
 }
